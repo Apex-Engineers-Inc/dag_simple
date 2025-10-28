@@ -285,6 +285,28 @@ class TestInputNodes:
         result = add.run(x=10, y=20)
         assert result == 30
 
+    def test_input_node_enforces_type_hint(self) -> None:
+        """Input nodes with type hints should validate inputs."""
+        x = input_node("x", int)
+
+        @node(deps=[x])
+        def consume(x: int) -> int:
+            return x
+
+        with pytest.raises(ValidationError):
+            consume.run(x="not an int")
+
+    def test_input_node_without_type_hint_skips_validation(self) -> None:
+        """Input nodes without type hints should accept any value."""
+        x = input_node("x", str)
+
+        @node(validate_types=False, deps=[x])
+        def passthrough(x: int) -> int:
+            return x
+
+        result = passthrough.run(x="a string")
+        assert result == "a string"
+
 
 class TestDAGClass:
     """Test the high-level DAG class."""
@@ -560,6 +582,23 @@ class TestAsyncNodes:
 
         assert "async" in str(exc_info.value).lower()
 
+    def test_sync_node_with_async_dependency_requires_run_async(self) -> None:
+        """Sync nodes with async dependencies should also require run_async()."""
+
+        @node()
+        async def async_dep() -> int:
+            await asyncio.sleep(0.01)
+            return 5
+
+        @node(deps=[async_dep])
+        def sync_consumer(async_dep: int) -> int:
+            return async_dep
+
+        with pytest.raises(RuntimeError) as exc_info:
+            sync_consumer.run()
+
+        assert "run_async" in str(exc_info.value)
+
     def test_async_with_caching(self) -> None:
         """Test async nodes with caching."""
         call_count = {"count": 0}
@@ -717,6 +756,22 @@ class TestDAGClassEnhancements:
 
         results = asyncio.run(dag.execute_all_async())
         assert results == {"child": 10}
+
+
+class TestExecutionContext:
+    """Test ExecutionContext utility behavior."""
+
+    def test_get_cache_lock_reuses_same_lock(self) -> None:
+        """Cache locks should be reused per key."""
+        from dag_simple.context import ExecutionContext
+
+        context = ExecutionContext(enable_cache=True)
+        first = context.get_cache_lock("key")
+        second = context.get_cache_lock("key")
+        other = context.get_cache_lock("other")
+
+        assert first is second
+        assert first is not other
 
 
 class TestExecutionErrorHandling:
