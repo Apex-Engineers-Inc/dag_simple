@@ -1,7 +1,9 @@
 # DAG Simple
 
-[![PyPI version](https://badge.fury.io/py/dag-simple.svg)](https://badge.fury.io/py/dag-simple)
+[![PyPI version](https://img.shields.io/pypi/v/dag-simple.svg)](https://pypi.org/project/dag-simple/)
 [![Python Support](https://img.shields.io/pypi/pyversions/dag-simple.svg)](https://pypi.org/project/dag-simple/)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/yourusername/dag-simple/actions/workflows/ci-publish.yml)
+[![Linting: Ruff](https://img.shields.io/badge/linting-Ruff-46a2f1?logo=ruff&logoColor=white)](https://github.com/yourusername/dag-simple/blob/main/pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A **dead simple**, **type-safe** DAG (Directed Acyclic Graph) library for Python with runtime validation, caching, and full async support.

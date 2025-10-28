@@ -5,7 +5,7 @@ description = "A dead simple, type-safe DAG (Directed Acyclic Graph) library wit
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "DAG Simple Contributors" }]
+authors = [{ name = "Apex Engineers, Inc." }]
 keywords = [
     "dag",
     "directed-acyclic-graph",
@@ -34,10 +34,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/yourusername/dag-simple"
-Documentation = "https://github.com/yourusername/dag-simple#readme"
-Repository = "https://github.com/yourusername/dag-simple"
-"Bug Tracker" = "https://github.com/yourusername/dag-simple/issues"
+Homepage = "https://github.com/Apex-Engineers-Inc/dag_simple"
+Documentation = "https://github.com/Apex-Engineers-Inc/dag_simple#readme"
+Repository = "https://github.com/Apex-Engineers-Inc/dag_simple"
+"Bug Tracker" = "https://github.com/Apex-Engineers-Inc/dag_simple/issues"
 
 [project.optional-dependencies]
 dev = [

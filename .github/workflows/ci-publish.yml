@@ -1,0 +1,102 @@
+name: Tests and Publish
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          enable-cache: true
+
+      - name: Install Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Sync dependencies
+        run: uv sync --python ${{ matrix.python-version }} --group dev
+
+      - name: Run project checks
+        run: uv run --python ${{ matrix.python-version }} poe check-all
+
+  publish:
+    name: Build and Publish
+    needs: checks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PACKAGE_NAME: dag-simple
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          enable-cache: true
+
+      - name: Install Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync project dependencies
+        run: uv sync --python 3.12 --group dev
+
+      - name: Determine publish target
+        id: release
+        run: |
+          set -euo pipefail
+          VERSION=$(uv version --output-format json | jq -r '.version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          TMP_FILE=$(mktemp)
+          if curl -fsSL "https://pypi.org/pypi/${PACKAGE_NAME}/json" -o "$TMP_FILE"; then
+            if jq -e --arg ver "$VERSION" '.releases | has($ver)' "$TMP_FILE" > /dev/null; then
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "publish=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+          rm -f "$TMP_FILE"
+
+      - name: Publish decision
+        run: |
+          if [ "${{ steps.release.outputs.publish }}" = "true" ]; then
+            echo "Will publish version ${{ steps.release.outputs.version }} to PyPI."
+          else
+            echo "Version ${{ steps.release.outputs.version }} already exists on PyPI. Skipping publish."
+          fi
+
+      - name: Build distributions
+        if: steps.release.outputs.publish == 'true'
+        run: uv build
+
+      - name: Publish to PyPI
+        if: steps.release.outputs.publish == 'true'
+        run: uv publish --check-url https://pypi.org/simple --trusted-publishing always
