@@ -1,6 +1,6 @@
 [project]
 name = "dag-simple"
-version = "0.1.0"
+version = "0.1.1"
 description = "A dead simple, type-safe DAG (Directed Acyclic Graph) library with runtime validation, caching, and async support"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -116,6 +116,8 @@ check-all = { sequence = [
     "type-check",
     "test",
 ], help = "Run all checks: linting, type checking, and tests" }
+bump-patch = { cmd = "uv version --bump patch", help = "Increment the project patch version" }
+bump-minor = { cmd = "uv version --bump minor", help = "Increment the project minor version" }
 
 [dependency-groups]
 dev = [
