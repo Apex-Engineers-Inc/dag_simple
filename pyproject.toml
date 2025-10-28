@@ -71,7 +71,7 @@ addopts = [
 markers = ["codeblocks: marks tests as codeblock tests"]
 
 [tool.pyright]
-include = ["src"]
+include = ["src", "tests", "examples"]
 exclude = ["**/__pycache__", ".venv", "build", "dist"]
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
