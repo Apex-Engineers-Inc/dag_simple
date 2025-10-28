@@ -1,0 +1,30 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "[python]": {
+      "editor.defaultFormatter": "charliermarsh.ruff",
+      "editor.codeActionsOnSave": {
+        "source.organizeImports.ruff": "explicit"
+      }
+    },
+    "cSpell.words": [
+      "api",
+      "asyncio",
+      "dag",
+      "Dask",
+      "dict",
+      "docstrings",
+      "len",
+      "ml",
+      "Py",
+      "pyright",
+      "pytest",
+      "topo",
+      "url"
+    ]
+  }
+}

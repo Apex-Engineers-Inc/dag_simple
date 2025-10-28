@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest:*)",
+      "Bash(python examples/basic_example.py:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

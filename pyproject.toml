@@ -1,0 +1,128 @@
+[project]
+name = "dag-simple"
+version = "0.1.0"
+description = "A dead simple, type-safe DAG (Directed Acyclic Graph) library with runtime validation, caching, and async support"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "DAG Simple Contributors" }]
+keywords = [
+    "dag",
+    "directed-acyclic-graph",
+    "workflow",
+    "pipeline",
+    "async",
+    "asyncio",
+    "type-safe",
+    "validation",
+    "caching",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/yourusername/dag-simple"
+Documentation = "https://github.com/yourusername/dag-simple#readme"
+Repository = "https://github.com/yourusername/dag-simple"
+"Bug Tracker" = "https://github.com/yourusername/dag-simple/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-codeblocks>=0.1.0",
+    "pyright>=1.1.350",
+    "ruff>=0.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dag_simple"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "**/*.md"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--cov=dag_simple",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--codeblocks",
+]
+markers = ["codeblocks: marks tests as codeblock tests"]
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", ".venv", "build", "dist"]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+pythonVersion = "3.10"
+pythonPlatform = "All"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dag_simple"]
+force-single-line = false
+combine-as-imports = true
+split-on-trailing-comma = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.poe.tasks]
+test = { cmd = "pytest", help = "Run the test suite with pytest" }
+lint = { cmd = "ruff check .", help = "Run ruff linting on the entire project" }
+format = { cmd = "ruff format .", help = "Format code using ruff" }
+type-check = { cmd = "pyright", help = "Run pyright type checking on the entire project" }
+check-all = { sequence = [
+    "lint",
+    "type-check",
+    "test",
+], help = "Run all checks: linting, type checking, and tests" }
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.350",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "pytest-codeblocks>=0.1.0",
+    "ruff>=0.14.2",
+    "poethepoet>=0.25.0",
+]
