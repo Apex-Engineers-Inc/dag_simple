@@ -950,19 +950,21 @@ class TestNodeEdgeCases:
 
     def test_node_type_hints_exception(self) -> None:
         """Test exception handling when getting type hints fails."""
+        import sys
+        from unittest.mock import patch
+
+        from dag_simple.node import Node
 
         # Create a function with missing type hints to simulate problematic type hints
         def problematic_func(x: object) -> object:
             return x
 
-        from unittest.mock import patch
-
-        from dag_simple.node import Node
-
-        with patch("dag_simple.node.get_type_hints", side_effect=Exception("Type hint error")):
+        # Patch get_type_hints where it's used in the node module
+        # We need to patch the already-imported reference
+        with patch.object(sys.modules["dag_simple.node"], "get_type_hints", side_effect=Exception("Type hint error")):
             # This should not raise an exception, but should disable validation
-            node = Node(problematic_func, validate_types=True)
-            assert node.validate_types is False
+            node_instance = Node(problematic_func, validate_types=True)
+            assert node_instance.validate_types is False
 
     def test_node_repr(self) -> None:
         """Test Node __repr__ method."""
