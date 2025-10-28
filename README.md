@@ -2,8 +2,10 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/dag-simple.svg)](https://pypi.org/project/dag-simple/)
 [![Python Support](https://img.shields.io/pypi/pyversions/dag-simple.svg)](https://pypi.org/project/dag-simple/)
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/yourusername/dag-simple/actions/workflows/ci-publish.yml)
-[![Linting: Ruff](https://img.shields.io/badge/linting-Ruff-46a2f1?logo=ruff&logoColor=white)](https://github.com/yourusername/dag-simple/blob/main/pyproject.toml)
+[![Tests](https://github.com/Apex-Engineers-Inc/dag_simple/actions/workflows/ci-publish.yml/badge.svg?branch=main)](https://github.com/Apex-Engineers-Inc/dag_simple/actions/workflows/ci-publish.yml)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/Apex-Engineers-Inc/dag_simple/actions/workflows/ci-publish.yml)
+[![Linting: Ruff](https://img.shields.io/badge/linting-Ruff-46a2f1?logo=ruff&logoColor=white)](https://github.com/Apex-Engineers-Inc/dag_simple/blob/main/pyproject.toml)
+[![Typing: Pyright](https://img.shields.io/badge/typing-Pyright-blue.svg)](https://github.com/Apex-Engineers-Inc/dag_simple/actions/workflows/ci-publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A **dead simple**, **type-safe** DAG (Directed Acyclic Graph) library for Python with runtime validation, caching, and full async support.
