@@ -260,6 +260,7 @@ def scaled(total_energy: int, fetch_multiplier: int) -> int:
 def main() -> None:
     result = run_sync_in_process(total_energy, seed=10)
     print(result)  # executes in a worker process
+    assert result == 730
 
     with ProcessPoolExecutor() as pool:
         parallel = [
@@ -267,9 +268,11 @@ def main() -> None:
             for seed in range(3)
         ]
         print(parallel)
+        assert parallel == [30, 55, 90]
 
         scaled_result = run_async_in_process(scaled, executor=pool, seed=5)
         print(scaled_result)
+        assert scaled_result == 510
 
 
 if __name__ == "__main__":
