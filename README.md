@@ -199,6 +199,91 @@ order_service.add_node(get_data)
 - ✅ Want automatic concurrent async execution
 - ✅ Need namespace separation
 
+## 🧵 Run DAGs in Parallel Processes
+
+`run_sync_in_process` and `run_async_in_process` wrap a DAG evaluation in a
+`ProcessPoolExecutor`. They are useful when you want the work to run on a separate
+CPU core or need to isolate long-running jobs from interactive code.
+
+**Use a process pool when you need to:**
+
+- ✅ Run CPU-bound workloads without blocking the main thread or event loop.
+- ✅ Execute multiple DAGs side-by-side.
+- ✅ Keep expensive computations isolated from user-facing code.
+
+**Remember:**
+
+- Functions, their inputs, and their outputs must be picklable so they can cross
+  process boundaries.
+- Each worker has its own `ExecutionContext`, so cached values are not shared
+  across processes unless you provide external storage.
+- Spawning processes is expensive. Reuse a `ProcessPoolExecutor` to amortize the
+  startup cost.
+- `run_sync_in_process` only accepts branches made entirely of synchronous nodes.
+
+```python
+import asyncio
+from concurrent.futures import ProcessPoolExecutor
+
+from dag_simple import node, run_async_in_process, run_sync_in_process
+
+
+@node()
+def make_numbers(seed: int) -> list[int]:
+    return [seed + i for i in range(5)]
+
+
+@node(deps=[make_numbers])
+def total_energy(make_numbers: list[int]) -> int:
+    return sum(value * value for value in make_numbers)
+
+
+@node()
+async def fetch_multiplier() -> int:
+    await asyncio.sleep(0.1)
+    return 2
+
+
+@node(deps=[total_energy, fetch_multiplier])
+def scaled(total_energy: int, fetch_multiplier: int) -> int:
+    return total_energy * fetch_multiplier
+
+
+@node()
+def explode() -> None:
+    raise ValueError("boom")
+
+
+def main() -> None:
+    energy = run_sync_in_process(total_energy, seed=10)
+    assert energy == 730
+
+    with ProcessPoolExecutor() as pool:
+        parallel = [
+            run_sync_in_process(total_energy, executor=pool, seed=seed)
+            for seed in range(3)
+        ]
+        assert parallel == [30, 55, 90]
+
+        scaled_result = run_async_in_process(scaled, executor=pool, seed=5)
+        assert scaled_result == 510
+
+    try:
+        run_sync_in_process(explode)
+    except ValueError as exc:
+        assert str(exc) == "boom"
+
+
+if __name__ == "__main__":
+    main()
+```
+
+The exceptions raised inside a worker are re-raised in the calling process when
+you access the result, so normal error handling applies. See
+[`examples/process_pool_example.py`](examples/process_pool_example.py) for a
+complete runnable walkthrough, including sharing a pool across many DAG
+invocations.
+
 ## 📖 Core Concepts
 
 ### Nodes
