@@ -199,6 +199,78 @@ order_service.add_node(get_data)
 - ✅ Want automatic concurrent async execution
 - ✅ Need namespace separation
 
+## 🧵 Run DAGs in Parallel Processes
+
+Some workloads are CPU-bound or need to run completely isolated from the main interpreter. The
+helpers `run_sync_in_process` and `run_async_in_process` let you offload an entire DAG evaluation to
+`ProcessPoolExecutor` workers, giving you true parallelism across CPU cores and freeing the main
+event loop/thread.
+
+**When to use process execution:**
+
+- ✅ CPU-intensive nodes that would block the event loop or main thread
+- ✅ Run multiple DAGs side-by-side without interference
+- ✅ Isolate long-running jobs from short-lived interactive work
+
+**Things to keep in mind:**
+
+- All node functions, their inputs, and their outputs must be picklable so they can cross process
+  boundaries.
+- Each process has its own `ExecutionContext`. Cached results are not shared across processes unless
+  you design explicit shared storage.
+- Spawning processes has overhead. Reuse a `ProcessPoolExecutor` when launching many DAG runs.
+
+```python
+import asyncio
+from concurrent.futures import ProcessPoolExecutor
+
+from dag_simple import node, run_async_in_process, run_sync_in_process
+
+
+@node()
+def make_numbers(seed: int) -> list[int]:
+    return [seed + i for i in range(5)]
+
+
+@node(deps=[make_numbers])
+def total_energy(make_numbers: list[int]) -> int:
+    # Represent a CPU-heavy loop
+    return sum(value * value for value in make_numbers)
+
+
+@node()
+async def fetch_multiplier() -> int:
+    await asyncio.sleep(0.1)
+    return 2
+
+
+@node(deps=[total_energy, fetch_multiplier])
+def scaled(total_energy: int, fetch_multiplier: int) -> int:
+    return total_energy * fetch_multiplier
+
+
+def main() -> None:
+    result = run_sync_in_process(total_energy, seed=10)
+    print(result)  # executes in a worker process
+
+    with ProcessPoolExecutor() as pool:
+        parallel = [
+            run_sync_in_process(total_energy, executor=pool, seed=seed)
+            for seed in range(3)
+        ]
+        print(parallel)
+
+        scaled_result = run_async_in_process(scaled, executor=pool, seed=5)
+        print(scaled_result)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+See [`examples/process_pool_example.py`](examples/process_pool_example.py) for a complete runnable
+walkthrough, including sharing a process pool across many DAG invocations.
+
 ## 📖 Core Concepts
 
 ### Nodes

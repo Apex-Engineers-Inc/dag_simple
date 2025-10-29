@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from dag_simple.context import ExecutionContext
@@ -232,3 +233,77 @@ async def _execute_node_without_cache(
     validate_output_type(node, result, node.type_hints)
 
     return cast(R, result)
+
+
+def run_sync_in_process(
+    node: Node[R],
+    *,
+    enable_cache: bool = True,
+    executor: ProcessPoolExecutor | None = None,
+    **inputs: Any,
+) -> R:
+    """Execute ``run_sync`` inside a worker process.
+
+    Args:
+        node: The root node to execute.
+        enable_cache: Whether to enable caching for this execution.
+        executor: Optional ``ProcessPoolExecutor`` to submit the work to. When
+            omitted, a temporary single-worker executor is created for the call.
+        **inputs: Additional keyword arguments passed as DAG inputs.
+
+    Returns:
+        The result returned by ``run_sync``.
+    """
+
+    if executor is not None:
+        future = executor.submit(_run_sync_entry_point, node, enable_cache, inputs)
+        return future.result()
+
+    with ProcessPoolExecutor(max_workers=1) as process_pool:
+        future = process_pool.submit(_run_sync_entry_point, node, enable_cache, inputs)
+        return future.result()
+
+
+def run_async_in_process(
+    node: Node[R],
+    *,
+    enable_cache: bool = True,
+    executor: ProcessPoolExecutor | None = None,
+    **inputs: Any,
+) -> R:
+    """Execute ``run_async`` inside a worker process.
+
+    Args:
+        node: The root node to execute.
+        enable_cache: Whether to enable caching for this execution.
+        executor: Optional ``ProcessPoolExecutor`` to submit the work to. When
+            omitted, a temporary single-worker executor is created for the call.
+        **inputs: Additional keyword arguments passed as DAG inputs.
+
+    Returns:
+        The result returned by ``run_async``.
+    """
+
+    if executor is not None:
+        future = executor.submit(_run_async_entry_point, node, enable_cache, inputs)
+        return future.result()
+
+    with ProcessPoolExecutor(max_workers=1) as process_pool:
+        future = process_pool.submit(_run_async_entry_point, node, enable_cache, inputs)
+        return future.result()
+
+
+def _run_sync_entry_point(
+    node: Node[R], enable_cache: bool, inputs: dict[str, Any]
+) -> R:
+    """Process entry point for ``run_sync_in_process``."""
+
+    return run_sync(node, enable_cache=enable_cache, **inputs)  # pragma: no cover
+
+
+def _run_async_entry_point(
+    node: Node[R], enable_cache: bool, inputs: dict[str, Any]
+) -> R:
+    """Process entry point for ``run_async_in_process``."""
+
+    return asyncio.run(run_async(node, enable_cache=enable_cache, **inputs))  # pragma: no cover

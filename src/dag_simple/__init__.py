@@ -16,6 +16,12 @@ from dag_simple.exceptions import (
     MissingDependencyError,
     ValidationError,
 )
+from dag_simple.execution import (
+    run_async,
+    run_async_in_process,
+    run_sync,
+    run_sync_in_process,
+)
 from dag_simple.node import Node, input_node, node
 
 __version__ = "0.1.0"
@@ -29,4 +35,8 @@ __all__ = [
     "ValidationError",
     "MissingDependencyError",
     "ExecutionContext",
+    "run_sync",
+    "run_async",
+    "run_sync_in_process",
+    "run_async_in_process",
 ]
