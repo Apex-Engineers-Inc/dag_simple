@@ -220,6 +220,12 @@ event loop/thread.
   you design explicit shared storage.
 - Spawning processes has overhead. Reuse a `ProcessPoolExecutor` when launching many DAG runs.
 
+The synchronous helper will raise an error if the selected target or any of its
+dependencies are asynchronous. In the example below we call it on
+``total_energy``, whose branch is entirely synchronous, and use
+``run_async_in_process`` for the combined branch that includes the async
+``fetch_multiplier`` node.
+
 ```python
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
@@ -238,6 +244,8 @@ def total_energy(make_numbers: list[int]) -> int:
     return sum(value * value for value in make_numbers)
 
 
+# The synchronous helper can only target DAGs made of synchronous nodes.
+# We keep the async dependency in a separate branch for the async example below.
 @node()
 async def fetch_multiplier() -> int:
     await asyncio.sleep(0.1)
