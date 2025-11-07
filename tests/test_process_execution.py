@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor
 
-import pytest
+import rustest
 
 from dag_simple.execution import run_async_in_process, run_sync_in_process
 
@@ -38,10 +38,10 @@ def test_run_async_in_process_with_custom_executor() -> None:
 
 
 def test_run_sync_in_process_propagates_exceptions() -> None:
-    with pytest.raises(ValueError, match="boom"):
+    with rustest.raises(ValueError, match="boom"):
         run_sync_in_process(explode)
 
 
 def test_run_async_in_process_propagates_exceptions() -> None:
-    with pytest.raises(RuntimeError, match="async boom"):
+    with rustest.raises(RuntimeError, match="async boom"):
         run_async_in_process(explode_async)

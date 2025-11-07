@@ -106,7 +106,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.poe.tasks]
-test = { cmd = "rustest", help = "Run the test suite with rustest" }
+test = { cmd = "python -m rustest", help = "Run the test suite with rustest" }
 lint = { cmd = "ruff check .", help = "Run ruff linting on the entire project" }
 format = { cmd = "ruff format .", help = "Format code using ruff" }
 type-check = { cmd = "pyright", help = "Run pyright type checking on the entire project" }
