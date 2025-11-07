@@ -307,6 +307,17 @@ class TestInputNodes:
         result = passthrough.run(x="a string")
         assert result == "a string"
 
+    def test_input_node_with_no_type_hint(self) -> None:
+        """Test input_node created without any type hint."""
+        x = input_node("x")  # No type hint provided  # type: ignore[var-annotated]
+
+        @node(deps=[x])
+        def double(x: int) -> int:
+            return x * 2
+
+        result = double.run(x=5)
+        assert result == 10
+
 
 class TestDAGClass:
     """Test the high-level DAG class."""
@@ -416,6 +427,29 @@ class TestIntrospection:
 
         deps = c.get_all_dependencies()
         assert deps == {"a", "b"}
+
+    def test_get_all_dependencies_diamond_pattern(self) -> None:
+        """Test get_all_dependencies with diamond dependency pattern."""
+
+        @node()
+        def a(x: int) -> int:
+            return x
+
+        @node(deps=[a])
+        def b(a: int) -> int:
+            return a * 2
+
+        @node(deps=[a])
+        def c(a: int) -> int:
+            return a * 3
+
+        @node(deps=[b, c])
+        def d(b: int, c: int) -> int:
+            return b + c
+
+        # This should visit 'a' twice but only add it once
+        deps = d.get_all_dependencies()
+        assert deps == {"a", "b", "c"}
 
     def test_to_mermaid(self) -> None:
         """Test Mermaid diagram generation."""
@@ -722,6 +756,21 @@ class TestDAGClassEnhancements:
 
         result = asyncio.run(dag.execute_async("async_node", x=5))
         assert result == 10
+
+    def test_async_execute_with_node_object(self) -> None:
+        """Test DAG.execute_async with Node object instead of string."""
+        dag = DAG()
+
+        @node()
+        async def async_node(x: int) -> int:
+            await asyncio.sleep(0.01)
+            return x * 3
+
+        dag.add_node(async_node)
+
+        # Pass Node object directly instead of string
+        result = asyncio.run(dag.execute_async(async_node, x=5))
+        assert result == 15
 
     def test_get_node_not_found(self) -> None:
         """Test KeyError when getting non-existent node."""
