@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# Import test nodes - must use absolute import for rustest compatibility
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -9,7 +8,7 @@ from rustest import raises
 
 from dag_simple.execution import run_async_in_process, run_sync_in_process
 
-# Add tests directory to path for imports
+# Add tests directory to path for rustest compatibility with relative imports
 tests_dir = Path(__file__).parent
 if str(tests_dir) not in sys.path:
     sys.path.insert(0, str(tests_dir))
