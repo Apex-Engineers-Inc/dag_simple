@@ -41,8 +41,9 @@ Repository = "https://github.com/Apex-Engineers-Inc/dag_simple"
 
 [project.optional-dependencies]
 dev = [
+    "rustest>=0.1.0",
+    "coverage[toml]>=7.0.0",
     "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
     "pytest-codeblocks>=0.1.0",
     "pyright>=1.1.350",
     "ruff>=0.2.0",
@@ -56,19 +57,40 @@ build-backend = "hatchling.build"
 packages = ["src/dag_simple"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "**/*.md"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+# pytest is now only used for markdown codeblock testing
+testpaths = ["**/*.md"]
 addopts = [
     "-v",
     "--strict-markers",
-    "--cov=dag_simple",
-    "--cov-report=term-missing",
-    "--cov-report=html",
     "--codeblocks",
 ]
 markers = ["codeblocks: marks tests as codeblock tests"]
+
+[tool.coverage.run]
+source = ["dag_simple"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [tool.pyright]
 include = ["src", "tests", "examples"]
@@ -107,7 +129,10 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.poe.tasks]
-test = { cmd = "pytest", help = "Run the test suite with pytest" }
+test = { cmd = "coverage run -m rustest tests/", help = "Run the test suite with rustest and coverage" }
+test-md = { cmd = "pytest", help = "Run markdown codeblock tests with pytest" }
+coverage-report = { cmd = "coverage report", help = "Display coverage report" }
+coverage-html = { cmd = "coverage html", help = "Generate HTML coverage report" }
 lint = { cmd = "ruff check .", help = "Run ruff linting on the entire project" }
 format = { cmd = "ruff format .", help = "Format code using ruff" }
 type-check = { cmd = "pyright", help = "Run pyright type checking on the entire project" }
@@ -115,15 +140,18 @@ check-all = { sequence = [
     "lint",
     "type-check",
     "test",
-], help = "Run all checks: linting, type checking, and tests" }
+    "test-md",
+    "coverage-report",
+], help = "Run all checks: linting, type checking, and tests (both rustest and markdown)" }
 bump-patch = { cmd = "uv version --bump patch", help = "Increment the project patch version" }
 bump-minor = { cmd = "uv version --bump minor", help = "Increment the project minor version" }
 
 [dependency-groups]
 dev = [
     "pyright>=1.1.350",
+    "rustest>=0.1.0",
+    "coverage[toml]>=7.0.0",
     "pytest>=8.4.2",
-    "pytest-cov>=7.0.0",
     "pytest-codeblocks>=0.1.0",
     "ruff>=0.14.2",
     "poethepoet>=0.25.0",
