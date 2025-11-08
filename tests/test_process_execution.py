@@ -1,12 +1,24 @@
 from __future__ import annotations
 
+import sys
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 
-import pytest
+from rustest import raises
 
 from dag_simple.execution import run_async_in_process, run_sync_in_process
 
-from .process_nodes import add_async, double, explode, explode_async
+# Add tests directory to path for rustest compatibility with relative imports
+tests_dir = Path(__file__).parent
+if str(tests_dir) not in sys.path:
+    sys.path.insert(0, str(tests_dir))
+
+from process_nodes import (  # noqa: E402  # type: ignore[import-not-found]
+    add_async,
+    double,
+    explode,
+    explode_async,
+)
 
 
 def test_run_sync_in_process_returns_value() -> None:
@@ -38,10 +50,10 @@ def test_run_async_in_process_with_custom_executor() -> None:
 
 
 def test_run_sync_in_process_propagates_exceptions() -> None:
-    with pytest.raises(ValueError, match="boom"):
+    with raises(ValueError, match="boom"):
         run_sync_in_process(explode)
 
 
 def test_run_async_in_process_propagates_exceptions() -> None:
-    with pytest.raises(RuntimeError, match="async boom"):
+    with raises(RuntimeError, match="async boom"):
         run_async_in_process(explode_async)
