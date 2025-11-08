@@ -2,7 +2,7 @@
 
 import asyncio
 
-import rustest
+from rustest import raises
 
 from dag_simple import (
     DAG,
@@ -82,7 +82,7 @@ class TestTypeValidation:
         def typed_func(x: int) -> int:
             return x
 
-        with rustest.raises(ValidationError) as exc_info:
+        with raises(ValidationError) as exc_info:
             typed_func.run(x="not an int")
 
         assert "expected type int" in str(exc_info.value)
@@ -94,7 +94,7 @@ class TestTypeValidation:
         def bad_return(x: int) -> int:
             return "not an int"  # type: ignore
 
-        with rustest.raises(ValidationError) as exc_info:
+        with raises(ValidationError) as exc_info:
             bad_return.run(x=5)
 
         assert "return type expected int" in str(exc_info.value)
@@ -195,7 +195,7 @@ class TestCycleDetection:
         def self_ref(x: int) -> int:
             return x
 
-        with rustest.raises(CycleDetectedError):
+        with raises(CycleDetectedError):
             self_ref.deps.append(self_ref)
             self_ref._validate_no_cycles()  # pyright: ignore[reportPrivateUsage]
 
@@ -213,7 +213,7 @@ class TestCycleDetection:
         a.deps = [b]
         b.deps = [a]
 
-        with rustest.raises(CycleDetectedError):
+        with raises(CycleDetectedError):
             a._validate_no_cycles()  # pyright: ignore[reportPrivateUsage]
 
 
@@ -293,7 +293,7 @@ class TestInputNodes:
         def consume(x: int) -> int:
             return x
 
-        with rustest.raises(ValidationError):
+        with raises(ValidationError):
             consume.run(x="not an int")
 
     def test_input_node_without_type_hint_skips_validation(self) -> None:
@@ -306,6 +306,17 @@ class TestInputNodes:
 
         result = passthrough.run(x="a string")
         assert result == "a string"
+
+    def test_input_node_with_no_type_hint(self) -> None:
+        """Test input_node created without any type hint."""
+        x = input_node("x")  # No type hint provided  # type: ignore[var-annotated]
+
+        @node(deps=[x])
+        def double(x: int) -> int:
+            return x * 2
+
+        result = double.run(x=5)
+        assert result == 10
 
 
 class TestDAGClass:
@@ -363,7 +374,7 @@ class TestErrorHandling:
         def needs_x(x: int) -> int:
             return x
 
-        with rustest.raises(MissingDependencyError) as exc_info:
+        with raises(MissingDependencyError) as exc_info:
             needs_x.run()
 
         assert "missing required parameters" in str(exc_info.value)
@@ -375,7 +386,7 @@ class TestErrorHandling:
         def my_func(correct_name: int) -> int:
             return correct_name
 
-        with rustest.raises(MissingDependencyError):
+        with raises(MissingDependencyError):
             my_func.run(wrong_name=5)
 
 
@@ -416,6 +427,29 @@ class TestIntrospection:
 
         deps = c.get_all_dependencies()
         assert deps == {"a", "b"}
+
+    def test_get_all_dependencies_diamond_pattern(self) -> None:
+        """Test get_all_dependencies with diamond dependency pattern."""
+
+        @node()
+        def a(x: int) -> int:
+            return x
+
+        @node(deps=[a])
+        def b(a: int) -> int:
+            return a * 2
+
+        @node(deps=[a])
+        def c(a: int) -> int:
+            return a * 3
+
+        @node(deps=[b, c])
+        def d(b: int, c: int) -> int:
+            return b + c
+
+        # This should visit 'a' twice but only add it once
+        deps = d.get_all_dependencies()
+        assert deps == {"a", "b", "c"}
 
     def test_to_mermaid(self) -> None:
         """Test Mermaid diagram generation."""
@@ -577,7 +611,7 @@ class TestAsyncNodes:
             await asyncio.sleep(0.01)
             return x
 
-        with rustest.raises(RuntimeError) as exc_info:
+        with raises(RuntimeError) as exc_info:
             async_func.run(x=5)
 
         assert "async" in str(exc_info.value).lower()
@@ -594,7 +628,7 @@ class TestAsyncNodes:
         def sync_consumer(async_dep: int) -> int:
             return async_dep
 
-        with rustest.raises(RuntimeError) as exc_info:
+        with raises(RuntimeError) as exc_info:
             sync_consumer.run()
 
         assert "run_async" in str(exc_info.value)
@@ -723,11 +757,26 @@ class TestDAGClassEnhancements:
         result = asyncio.run(dag.execute_async("async_node", x=5))
         assert result == 10
 
+    def test_async_execute_with_node_object(self) -> None:
+        """Test DAG.execute_async with Node object instead of string."""
+        dag = DAG()
+
+        @node()
+        async def async_node(x: int) -> int:
+            await asyncio.sleep(0.01)
+            return x * 3
+
+        dag.add_node(async_node)
+
+        # Pass Node object directly instead of string
+        result = asyncio.run(dag.execute_async(async_node, x=5))
+        assert result == 15
+
     def test_get_node_not_found(self) -> None:
         """Test KeyError when getting non-existent node."""
         dag = DAG()
 
-        with rustest.raises(KeyError) as exc_info:
+        with raises(KeyError) as exc_info:
             dag.get_node("nonexistent")
 
         assert "Node 'nonexistent' not found in DAG" in str(exc_info.value)
@@ -786,7 +835,7 @@ class TestExecutionErrorHandling:
             return x + 1
 
         # This should trigger a TypeError when calling the function
-        with rustest.raises(TypeError) as exc_info:
+        with raises(TypeError) as exc_info:
             bad_func.run(x="not_an_int")
 
         assert "Failed running node 'bad_func'" in str(exc_info.value)
@@ -800,7 +849,7 @@ class TestExecutionErrorHandling:
             return x + 1
 
         # This should trigger a TypeError when calling the function
-        with rustest.raises(TypeError) as exc_info:
+        with raises(TypeError) as exc_info:
             asyncio.run(bad_async_func.run_async(x="not_an_int"))
 
         assert "Failed running node 'bad_async_func'" in str(exc_info.value)
@@ -812,7 +861,7 @@ class TestExecutionErrorHandling:
         async def needs_x(x: int) -> int:
             return x
 
-        with rustest.raises(MissingDependencyError) as exc_info:
+        with raises(MissingDependencyError) as exc_info:
             asyncio.run(needs_x.run_async())
 
         assert "missing required parameters" in str(exc_info.value)
@@ -896,7 +945,7 @@ class TestIntrospectionEdgeCases:
         a.deps = [b]
         b.deps = [a]
 
-        with rustest.raises(CycleDetectedError) as exc_info:
+        with raises(CycleDetectedError) as exc_info:
             a.topological_sort()
 
         assert "Cycle detected during topological sort" in str(exc_info.value)
