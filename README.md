@@ -616,10 +616,7 @@ assert order == ["example_node"]
 
 ### `@node` Decorator
 
-<!--pytest.mark.skip-->
-
-```python
-# Syntax example - not executable code
+```text
 @node(
     deps: list[Node] | None = None,       # Dependencies
     name: str | None = None,              # Custom name
@@ -630,10 +627,7 @@ assert order == ["example_node"]
 
 ### `Node.run()` and `Node.run_async()`
 
-<!--pytest.mark.skip-->
-
-```python
-# Syntax examples - not executable code
+```text
 # Synchronous execution
 result = node.run(
     enable_cache: bool = True,  # Enable/disable caching

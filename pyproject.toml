@@ -41,10 +41,8 @@ Repository = "https://github.com/Apex-Engineers-Inc/dag_simple"
 
 [project.optional-dependencies]
 dev = [
-    "rustest>=0.3.0",
+    "rustest>=0.4.0",
     "coverage[toml]>=7.0.0",
-    "pytest>=8.0.0",
-    "pytest-codeblocks>=0.1.0",
     "pyright>=1.1.350",
     "ruff>=0.2.0",
 ]
@@ -56,15 +54,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/dag_simple"]
 
-[tool.pytest.ini_options]
-# pytest is now only used for markdown codeblock testing
-testpaths = ["**/*.md"]
-addopts = [
-    "-v",
-    "--strict-markers",
-    "--codeblocks",
-]
-markers = ["codeblocks: marks tests as codeblock tests"]
+# Pytest configuration removed - now using rustest>=0.4.0 for all testing
+# rustest 0.4.0+ includes built-in markdown codeblock testing support
 
 [tool.coverage.run]
 source = ["dag_simple"]
@@ -130,7 +121,7 @@ indent-style = "space"
 
 [tool.poe.tasks]
 test = { cmd = "coverage run -m rustest tests/", help = "Run the test suite with rustest and coverage" }
-test-md = { cmd = "pytest", help = "Run markdown codeblock tests with pytest" }
+test-md = { cmd = "python -m rustest README.md CONTRIBUTING.md", help = "Run markdown codeblock tests with rustest" }
 coverage-report = { cmd = "coverage report", help = "Display coverage report" }
 coverage-html = { cmd = "coverage html", help = "Generate HTML coverage report" }
 lint = { cmd = "ruff check .", help = "Run ruff linting on the entire project" }
@@ -149,10 +140,8 @@ bump-minor = { cmd = "uv version --bump minor", help = "Increment the project mi
 [dependency-groups]
 dev = [
     "pyright>=1.1.350",
-    "rustest>=0.3.0",
+    "rustest>=0.4.0",
     "coverage[toml]>=7.0.0",
-    "pytest>=8.4.2",
-    "pytest-codeblocks>=0.1.0",
     "ruff>=0.14.2",
     "poethepoet>=0.25.0",
 ]
