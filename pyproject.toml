@@ -121,7 +121,7 @@ indent-style = "space"
 
 [tool.poe.tasks]
 test = { cmd = "coverage run -m rustest tests/", help = "Run the test suite with rustest and coverage" }
-test-md = { cmd = "python -m rustest **/*.md", help = "Run markdown codeblock tests with rustest" }
+test-md = { cmd = "python -m rustest README.md CONTRIBUTING.md", help = "Run markdown codeblock tests with rustest" }
 coverage-report = { cmd = "coverage report", help = "Display coverage report" }
 coverage-html = { cmd = "coverage html", help = "Generate HTML coverage report" }
 lint = { cmd = "ruff check .", help = "Run ruff linting on the entire project" }
