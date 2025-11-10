@@ -60,11 +60,7 @@ packages = ["src/dag_simple"]
 [tool.coverage.run]
 source = ["dag_simple"]
 branch = true
-omit = [
-    "*/tests/*",
-    "*/test_*.py",
-    "*/__pycache__/*",
-]
+omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*"]
 
 [tool.coverage.report]
 precision = 2
@@ -120,8 +116,8 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.poe.tasks]
-test = { cmd = "coverage run -m rustest tests/", help = "Run the test suite with rustest and coverage" }
-test-md = { cmd = "python -m rustest README.md CONTRIBUTING.md", help = "Run markdown codeblock tests with rustest" }
+test = { cmd = "coverage run -m rustest tests/ -v", help = "Run the test suite with rustest and coverage" }
+test-md = { cmd = "python -m rustest README.md CONTRIBUTING.md -v", help = "Run markdown codeblock tests with rustest" }
 coverage-report = { cmd = "coverage report", help = "Display coverage report" }
 coverage-html = { cmd = "coverage html", help = "Generate HTML coverage report" }
 lint = { cmd = "ruff check .", help = "Run ruff linting on the entire project" }
@@ -140,7 +136,7 @@ bump-minor = { cmd = "uv version --bump minor", help = "Increment the project mi
 [dependency-groups]
 dev = [
     "pyright>=1.1.350",
-    "rustest>=0.4.0",
+    "rustest>=0.6.0",
     "coverage[toml]>=7.0.0",
     "ruff>=0.14.2",
     "poethepoet>=0.25.0",
