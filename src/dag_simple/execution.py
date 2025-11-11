@@ -10,7 +10,7 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from dag_simple.context import ExecutionContext
-from dag_simple.exceptions import MissingDependencyError
+from dag_simple.exceptions import MissingDependencyError, NodeExecutionError
 from dag_simple.validation import validate_input_types, validate_output_type
 
 if TYPE_CHECKING:
@@ -108,19 +108,41 @@ def run_sync(
     if missing:
         raise MissingDependencyError(f"Node '{node.name}' missing required parameters: {missing}")
 
+    # Add this node to the execution path
+    _context.add_to_path(node.name)
+
     # Validate input types
-    validate_input_types(node, accepted, node.type_hints)
+    try:
+        validate_input_types(node, accepted, node.type_hints)
+    except Exception as e:
+        raise NodeExecutionError(
+            node_name=node.name,
+            execution_path=_context.execution_path.copy(),
+            node_inputs=accepted,
+            original_exception=e,
+        ) from e
 
     # Execute the function
     try:
         result: R = node.fn(**accepted)  # type: ignore[return-value]
-    except TypeError as e:
-        raise TypeError(
-            f"Failed running node '{node.name}' with args {list(accepted.keys())}: {e}"
+    except Exception as e:
+        raise NodeExecutionError(
+            node_name=node.name,
+            execution_path=_context.execution_path.copy(),
+            node_inputs=accepted,
+            original_exception=e,
         ) from e
 
     # Validate output type
-    validate_output_type(node, result, node.type_hints)
+    try:
+        validate_output_type(node, result, node.type_hints)
+    except Exception as e:
+        raise NodeExecutionError(
+            node_name=node.name,
+            execution_path=_context.execution_path.copy(),
+            node_inputs=accepted,
+            original_exception=e,
+        ) from e
 
     # Cache result if enabled
     if node.cache_result:
@@ -215,8 +237,19 @@ async def _execute_node_without_cache(
     if missing:
         raise MissingDependencyError(f"Node '{node.name}' missing required parameters: {missing}")
 
+    # Add this node to the execution path
+    _context.add_to_path(node.name)
+
     # Validate input types
-    validate_input_types(node, accepted, node.type_hints)
+    try:
+        validate_input_types(node, accepted, node.type_hints)
+    except Exception as e:
+        raise NodeExecutionError(
+            node_name=node.name,
+            execution_path=_context.execution_path.copy(),
+            node_inputs=accepted,
+            original_exception=e,
+        ) from e
 
     # Execute the function (async or sync)
     try:
@@ -224,13 +257,24 @@ async def _execute_node_without_cache(
             result: R = await node.fn(**accepted)  # type: ignore[return-value]
         else:
             result: R = node.fn(**accepted)  # type: ignore[return-value]
-    except TypeError as e:
-        raise TypeError(
-            f"Failed running node '{node.name}' with args {list(accepted.keys())}: {e}"
+    except Exception as e:
+        raise NodeExecutionError(
+            node_name=node.name,
+            execution_path=_context.execution_path.copy(),
+            node_inputs=accepted,
+            original_exception=e,
         ) from e
 
     # Validate output type
-    validate_output_type(node, result, node.type_hints)
+    try:
+        validate_output_type(node, result, node.type_hints)
+    except Exception as e:
+        raise NodeExecutionError(
+            node_name=node.name,
+            execution_path=_context.execution_path.copy(),
+            node_inputs=accepted,
+            original_exception=e,
+        ) from e
 
     return cast(R, result)
 
@@ -301,17 +345,13 @@ def run_async_in_process(
         return future.result()
 
 
-def _run_sync_entry_point(
-    node: Node[R], enable_cache: bool, inputs: dict[str, Any]
-) -> R:
+def _run_sync_entry_point(node: Node[R], enable_cache: bool, inputs: dict[str, Any]) -> R:
     """Process entry point for ``run_sync_in_process``."""
 
     return run_sync(node, enable_cache=enable_cache, **inputs)  # pragma: no cover
 
 
-def _run_async_entry_point(
-    node: Node[R], enable_cache: bool, inputs: dict[str, Any]
-) -> R:
+def _run_async_entry_point(node: Node[R], enable_cache: bool, inputs: dict[str, Any]) -> R:
     """Process entry point for ``run_async_in_process``."""
 
     return asyncio.run(run_async(node, enable_cache=enable_cache, **inputs))  # pragma: no cover

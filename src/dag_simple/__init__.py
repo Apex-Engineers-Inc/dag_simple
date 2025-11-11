@@ -14,6 +14,7 @@ from dag_simple.exceptions import (
     CycleDetectedError,
     DAGError,
     MissingDependencyError,
+    NodeExecutionError,
     ValidationError,
 )
 from dag_simple.execution import (
@@ -34,6 +35,7 @@ __all__ = [
     "CycleDetectedError",
     "ValidationError",
     "MissingDependencyError",
+    "NodeExecutionError",
     "ExecutionContext",
     "run_sync",
     "run_async",
