@@ -1389,3 +1389,87 @@ class TestEnhancedErrorMessages:
         # Check error message
         error_msg = str(exc)
         assert "async_step1 -> async_step2 -> async_step3" in error_msg
+
+    def test_terminal_width_fallback(self) -> None:
+        """Test that terminal width falls back gracefully."""
+        import unittest.mock as mock
+
+        @node()
+        def failing_node(x: int) -> int:
+            raise ValueError("Test error")
+
+        # Mock get_terminal_size to raise an exception
+        with mock.patch("shutil.get_terminal_size", side_effect=ValueError("No terminal")):
+            with raises(NodeExecutionError) as exc_info:
+                failing_node.run(x=42)
+
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        # Should still work with fallback width of 80
+        error_msg = str(exc)
+        assert "Node Execution Failed" in error_msg
+
+    def test_no_inputs_formatting(self) -> None:
+        """Test error message formatting when node has no inputs."""
+
+        @node()
+        def no_input_node() -> int:
+            raise ValueError("Failed with no inputs")
+
+        with raises(NodeExecutionError) as exc_info:
+            no_input_node.run()
+
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert exc.node_inputs == {}
+        error_msg = str(exc)
+        assert "(no inputs)" in error_msg
+
+    def test_async_input_validation_error(self) -> None:
+        """Test async node input validation error is wrapped."""
+
+        @node(validate_types=True)
+        async def async_typed(x: int) -> int:
+            return x * 2
+
+        with raises(NodeExecutionError) as exc_info:
+            asyncio.run(async_typed.run_async(x="not an int"))
+
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, ValidationError)
+
+    def test_async_output_validation_error(self) -> None:
+        """Test async node output validation error is wrapped."""
+
+        @node(validate_types=True)
+        async def async_bad_output(x: int) -> int:
+            return "wrong"  # type: ignore
+
+        with raises(NodeExecutionError) as exc_info:
+            asyncio.run(async_bad_output.run_async(x=5))
+
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, ValidationError)
+
+    def test_exception_pickling(self) -> None:
+        """Test that NodeExecutionError can be pickled and unpickled."""
+        import pickle
+
+        @node()
+        def failing_node(x: int) -> int:
+            raise ValueError("Test error")
+
+        try:
+            failing_node.run(x=42)
+        except NodeExecutionError as e:
+            # Pickle and unpickle the exception
+            pickled = pickle.dumps(e)
+            unpickled = pickle.loads(pickled)
+
+            # Verify all attributes are preserved
+            assert unpickled.node_name == e.node_name
+            assert unpickled.execution_path == e.execution_path
+            assert unpickled.node_inputs == e.node_inputs
+            assert str(unpickled.original_exception) == str(e.original_exception)
