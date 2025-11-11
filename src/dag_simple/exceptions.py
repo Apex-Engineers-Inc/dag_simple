@@ -4,6 +4,7 @@ Exception classes for DAG Simple.
 
 from __future__ import annotations
 
+import shutil
 from typing import Any
 
 
@@ -61,20 +62,28 @@ class NodeExecutionError(DAGError):
         self.node_inputs = node_inputs
         self.original_exception = original_exception
 
+        # Get terminal width for proper formatting
+        try:
+            terminal_width = shutil.get_terminal_size().columns
+        except (AttributeError, ValueError):
+            terminal_width = 80  # Fallback to 80 if terminal size unavailable
+
         # Format the error message
         path_str = " -> ".join(execution_path)
 
         # Format inputs in a readable way
         inputs_str = self._format_inputs(node_inputs)
 
+        separator = "=" * terminal_width
+
         message = (
-            f"\n{'='*80}\n"
+            f"\n{separator}\n"
             f"Node Execution Failed: '{node_name}'\n"
-            f"{'='*80}\n"
+            f"{separator}\n"
             f"\nExecution Path:\n  {path_str}\n"
             f"\nInputs to '{node_name}':\n{inputs_str}\n"
             f"\nOriginal Error:\n  {type(original_exception).__name__}: {original_exception}\n"
-            f"{'='*80}"
+            f"{separator}"
         )
 
         super().__init__(message)
