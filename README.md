@@ -397,39 +397,58 @@ All execution errors are wrapped with comprehensive context information for easi
 ```python
 from dag_simple import node, NodeExecutionError
 
-@node(validate_types=True)
-def process_data(data: list[int]) -> int:
-    if len(data) == 0:
-        raise ValueError("Empty data not allowed")
-    return sum(data) / len(data)
+@node()
+def load_data(source: str) -> dict[str, int]:
+    return {"count": 100, "threshold": 50}
+
+@node(deps=[load_data])
+def process_data(load_data: dict[str, int], multiplier: int) -> int:
+    return load_data["count"] * multiplier
 
 @node(deps=[process_data])
-def use_result(process_data: int) -> str:
-    return f"Average: {process_data}"
+def validate_result(process_data: int) -> int:
+    if process_data > 1000:
+        raise ValueError(f"Result too large: {process_data}")
+    return process_data
 
-# When an error occurs, NodeExecutionError provides:
-# - The complete execution path (which nodes ran before the error)
-# - All inputs passed to the failed node
-# - The original exception for debugging
+@node(deps=[validate_result])
+def save_result(validate_result: int) -> str:
+    return f"Saved {validate_result}"
+
 try:
-    result = use_result.run(data=[])
+    # This will fail at validate_result because 100 * 20 = 2000 > 1000
+    save_result.run(source="database", multiplier=20)
 except NodeExecutionError as e:
-    # Error message includes:
-    # - Execution path: [process_data]
-    # - Failed node: process_data
-    # - Input: {"data": []}
-    # - Original error: ValueError("Empty data not allowed")
     print(e)
 ```
 
-**Benefits:**
+**Error Output:**
 
-- 🔍 **Execution Path** - See which nodes executed before the error occurred
+```
+================================================================================
+Node Execution Failed: 'validate_result'
+================================================================================
+
+Execution Path:
+  load_data -> process_data -> validate_result
+
+Inputs to 'validate_result':
+  process_data: 2000
+
+Original Error:
+  ValueError: Result too large: 2000
+================================================================================
+```
+
+**Key Features:**
+
+- 🔍 **Execution Path** - Shows which nodes executed before the error occurred
 - 📝 **Input Context** - All inputs passed to the failed node are captured
-- 🐛 **Original Exception** - Full stack trace of the underlying error is preserved
-- 🎯 **Clear Formatting** - Error messages are well-formatted and easy to read
+- 🐛 **Original Exception** - Full error details are preserved and displayed
+- 🎯 **Clear Formatting** - Well-structured, easy-to-read error messages
 - ⚙️ **Async Support** - Works seamlessly with both sync and async execution
 - 📦 **Multiprocessing Ready** - Exceptions are picklable for use with `ProcessPoolExecutor`
+- 🔗 **Exception Chaining** - Access `e.original_exception`, `e.execution_path`, and `e.node_inputs` for programmatic handling
 
 See [`examples/error_handling_example.py`](examples/error_handling_example.py) for more detailed examples.
 
