@@ -8,6 +8,7 @@ from dag_simple import (
     DAG,
     CycleDetectedError,
     MissingDependencyError,
+    NodeExecutionError,
     ValidationError,
     input_node,
     node,
@@ -82,10 +83,11 @@ class TestTypeValidation:
         def typed_func(x: int) -> int:
             return x
 
-        with raises(ValidationError) as exc_info:
+        with raises(NodeExecutionError) as exc_info:
             typed_func.run(x="not an int")
 
-        assert "expected type int" in str(exc_info.value)
+        assert isinstance(exc_info.value.original_exception, ValidationError)
+        assert "expected type int" in str(exc_info.value.original_exception)
 
     def test_invalid_output_type(self) -> None:
         """Test output type validation."""
@@ -94,10 +96,11 @@ class TestTypeValidation:
         def bad_return(x: int) -> int:
             return "not an int"  # type: ignore
 
-        with raises(ValidationError) as exc_info:
+        with raises(NodeExecutionError) as exc_info:
             bad_return.run(x=5)
 
-        assert "return type expected int" in str(exc_info.value)
+        assert isinstance(exc_info.value.original_exception, ValidationError)
+        assert "return type expected int" in str(exc_info.value.original_exception)
 
     def test_validation_disabled(self) -> None:
         """Test that validation can be disabled."""
@@ -293,8 +296,10 @@ class TestInputNodes:
         def consume(x: int) -> int:
             return x
 
-        with raises(ValidationError):
+        with raises(NodeExecutionError) as exc_info:
             consume.run(x="not an int")
+
+        assert isinstance(exc_info.value.original_exception, ValidationError)
 
     def test_input_node_without_type_hint_skips_validation(self) -> None:
         """Input nodes without type hints should accept any value."""
@@ -834,11 +839,12 @@ class TestExecutionErrorHandling:
             # This will raise a TypeError when x is not a number
             return x + 1
 
-        # This should trigger a TypeError when calling the function
-        with raises(TypeError) as exc_info:
+        # This should trigger a TypeError wrapped in NodeExecutionError
+        with raises(NodeExecutionError) as exc_info:
             bad_func.run(x="not_an_int")
 
-        assert "Failed running node 'bad_func'" in str(exc_info.value)
+        assert isinstance(exc_info.value.original_exception, TypeError)
+        assert "bad_func" in str(exc_info.value)
 
     def test_run_async_type_error(self) -> None:
         """Test TypeError handling in run_async."""
@@ -848,11 +854,12 @@ class TestExecutionErrorHandling:
             # This will raise a TypeError when x is not a number
             return x + 1
 
-        # This should trigger a TypeError when calling the function
-        with raises(TypeError) as exc_info:
+        # This should trigger a TypeError wrapped in NodeExecutionError
+        with raises(NodeExecutionError) as exc_info:
             asyncio.run(bad_async_func.run_async(x="not_an_int"))
 
-        assert "Failed running node 'bad_async_func'" in str(exc_info.value)
+        assert isinstance(exc_info.value.original_exception, TypeError)
+        assert "bad_async_func" in str(exc_info.value)
 
     def test_run_async_missing_dependency(self) -> None:
         """Test MissingDependencyError in run_async."""
@@ -1152,3 +1159,203 @@ class TestDAGVisualization:
 
         # This should not raise an error and should print DAG information
         dag.visualize_all()
+
+
+class TestEnhancedErrorMessages:
+    """Test enhanced error messages with execution context."""
+
+    def test_simple_node_failure_sync(self) -> None:
+        """Test that a simple node failure provides full context in sync mode."""
+
+        @node()
+        def failing_node(x: int) -> int:
+            raise ValueError("Something went wrong!")
+
+        with raises(NodeExecutionError) as exc_info:
+            failing_node.run(x=42)
+
+        # Check that the exception has the right attributes
+        assert exc_info.value.node_name == "failing_node"
+        assert exc_info.value.execution_path == ["failing_node"]
+        assert exc_info.value.node_inputs == {"x": 42}
+        assert isinstance(exc_info.value.original_exception, ValueError)
+        assert str(exc_info.value.original_exception) == "Something went wrong!"
+
+        # Check the formatted error message
+        error_msg = str(exc_info.value)
+        assert "Node Execution Failed: 'failing_node'" in error_msg
+        assert "failing_node" in error_msg  # Execution path
+        assert "x: 42" in error_msg  # Inputs
+        assert "ValueError: Something went wrong!" in error_msg
+
+    def test_simple_node_failure_async(self) -> None:
+        """Test that a simple node failure provides full context in async mode."""
+
+        @node()
+        async def failing_async_node(y: str) -> str:
+            raise RuntimeError("Async error!")
+
+        with raises(NodeExecutionError) as exc_info:
+            asyncio.run(failing_async_node.run_async(y="test"))
+
+        # Check attributes
+        assert exc_info.value.node_name == "failing_async_node"
+        assert exc_info.value.execution_path == ["failing_async_node"]
+        assert exc_info.value.node_inputs == {"y": "test"}
+        assert isinstance(exc_info.value.original_exception, RuntimeError)
+
+        # Check the formatted error message
+        error_msg = str(exc_info.value)
+        assert "Node Execution Failed: 'failing_async_node'" in error_msg
+        assert "y: 'test'" in error_msg
+
+    def test_multi_level_dag_failure_shows_path(self) -> None:
+        """Test that a multi-level DAG failure shows the full execution path."""
+
+        @node()
+        def step1(x: int) -> int:
+            return x * 2
+
+        @node(deps=[step1])
+        def step2(step1: int) -> int:
+            return step1 + 10
+
+        @node(deps=[step2])
+        def step3(step2: int) -> int:
+            raise ValueError(f"Failed with value {step2}")
+
+        with raises(NodeExecutionError) as exc_info:
+            step3.run(x=5)
+
+        # Check the execution path shows all nodes
+        assert exc_info.value.node_name == "step3"
+        assert exc_info.value.execution_path == ["step1", "step2", "step3"]
+        assert exc_info.value.node_inputs == {"step2": 20}  # (5*2) + 10
+
+        # Check the formatted error message shows the path
+        error_msg = str(exc_info.value)
+        assert "step1 -> step2 -> step3" in error_msg
+        assert "step2: 20" in error_msg
+
+    def test_complex_dag_failure_shows_full_path(self) -> None:
+        """Test complex DAG with multiple dependencies shows correct path."""
+
+        @node()
+        def load_data(source: str) -> dict[str, int]:
+            return {"count": 10}
+
+        @node(deps=[load_data])
+        def process_data(load_data: dict[str, int], multiplier: int) -> int:
+            return load_data["count"] * multiplier
+
+        @node(deps=[process_data])
+        def validate_data(process_data: int) -> int:
+            if process_data > 50:
+                raise ValueError(f"Value too large: {process_data}")
+            return process_data
+
+        @node(deps=[validate_data])
+        def save_data(validate_data: int) -> str:
+            return f"Saved {validate_data}"
+
+        with raises(NodeExecutionError) as exc_info:
+            save_data.run(source="db", multiplier=10)
+
+        # Check execution path
+        assert exc_info.value.node_name == "validate_data"
+        assert exc_info.value.execution_path == ["load_data", "process_data", "validate_data"]
+        assert exc_info.value.node_inputs == {"process_data": 100}
+
+        # Check error message
+        error_msg = str(exc_info.value)
+        assert "load_data -> process_data -> validate_data" in error_msg
+        assert "process_data: 100" in error_msg
+        assert "Value too large: 100" in error_msg
+
+    def test_type_validation_error_wrapped(self) -> None:
+        """Test that type validation errors are also wrapped with context."""
+
+        @node(validate_types=True)
+        def typed_node(x: int) -> int:
+            return x * 2
+
+        with raises(NodeExecutionError) as exc_info:
+            typed_node.run(x="not an int")
+
+        # Check that the original error is a ValidationError
+        assert isinstance(exc_info.value.original_exception, ValidationError)
+        assert exc_info.value.node_name == "typed_node"
+        assert exc_info.value.node_inputs == {"x": "not an int"}
+
+        # Check error message shows the validation issue
+        error_msg = str(exc_info.value)
+        assert "typed_node" in error_msg
+        assert "x: 'not an int'" in error_msg
+
+    def test_output_validation_error_wrapped(self) -> None:
+        """Test that output validation errors are wrapped with context."""
+
+        @node(validate_types=True)
+        def bad_output(x: int) -> int:
+            return "wrong type"  # type: ignore
+
+        with raises(NodeExecutionError) as exc_info:
+            bad_output.run(x=5)
+
+        # Check that it's wrapped
+        assert isinstance(exc_info.value.original_exception, ValidationError)
+        assert exc_info.value.node_name == "bad_output"
+
+        # Check error message
+        error_msg = str(exc_info.value)
+        assert "bad_output" in error_msg
+
+    def test_long_input_values_truncated(self) -> None:
+        """Test that long input values are truncated in error messages."""
+
+        @node()
+        def process_list(data: list[int]) -> int:
+            raise ValueError("Processing failed")
+
+        long_list = list(range(100))
+
+        with raises(NodeExecutionError) as exc_info:
+            process_list.run(data=long_list)
+
+        # Check that the input is captured
+        assert exc_info.value.node_inputs == {"data": long_list}
+
+        # Check that the formatted message truncates long values
+        error_msg = str(exc_info.value)
+        assert "data:" in error_msg
+        # The representation should be truncated
+        assert "..." in error_msg
+
+    def test_async_multi_level_dag_failure(self) -> None:
+        """Test async multi-level DAG shows correct execution path."""
+
+        @node()
+        async def async_step1(x: int) -> int:
+            await asyncio.sleep(0.01)
+            return x * 2
+
+        @node(deps=[async_step1])
+        async def async_step2(async_step1: int) -> int:
+            await asyncio.sleep(0.01)
+            return async_step1 + 5
+
+        @node(deps=[async_step2])
+        async def async_step3(async_step2: int) -> int:
+            raise RuntimeError(f"Async failed with {async_step2}")
+
+        with raises(NodeExecutionError) as exc_info:
+            asyncio.run(async_step3.run_async(x=10))
+
+        # Check execution path
+        assert exc_info.value.execution_path == ["async_step1", "async_step2", "async_step3"]
+        assert exc_info.value.node_name == "async_step3"
+        assert exc_info.value.node_inputs == {"async_step2": 25}  # (10*2) + 5
+
+        # Check error message
+        error_msg = str(exc_info.value)
+        assert "async_step1 -> async_step2 -> async_step3" in error_msg

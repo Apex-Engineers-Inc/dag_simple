@@ -17,6 +17,7 @@ class ExecutionContext:
     inputs: dict[str, Any] = field(default_factory=lambda: dict[str, Any]())
     enable_cache: bool = True
     _cache_locks: dict[str, asyncio.Lock] = field(default_factory=lambda: dict[str, asyncio.Lock]())
+    execution_path: list[str] = field(default_factory=list)
 
     def get_cached(self, key: str) -> tuple[bool, Any]:
         """Return (found, value) tuple."""
@@ -34,3 +35,7 @@ class ExecutionContext:
         if key not in self._cache_locks:
             self._cache_locks[key] = asyncio.Lock()
         return self._cache_locks[key]
+
+    def add_to_path(self, node_name: str) -> None:
+        """Add a node to the execution path."""
+        self.execution_path.append(node_name)

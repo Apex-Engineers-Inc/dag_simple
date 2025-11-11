@@ -6,6 +6,7 @@ from pathlib import Path
 
 from rustest import raises
 
+from dag_simple.exceptions import NodeExecutionError
 from dag_simple.execution import run_async_in_process, run_sync_in_process
 
 # Add tests directory to path for rustest compatibility with relative imports
@@ -50,10 +51,16 @@ def test_run_async_in_process_with_custom_executor() -> None:
 
 
 def test_run_sync_in_process_propagates_exceptions() -> None:
-    with raises(ValueError, match="boom"):
+    with raises(NodeExecutionError) as exc_info:
         run_sync_in_process(explode)
+
+    assert isinstance(exc_info.value.original_exception, ValueError)
+    assert "boom" in str(exc_info.value.original_exception)
 
 
 def test_run_async_in_process_propagates_exceptions() -> None:
-    with raises(RuntimeError, match="async boom"):
+    with raises(NodeExecutionError) as exc_info:
         run_async_in_process(explode_async)
+
+    assert isinstance(exc_info.value.original_exception, RuntimeError)
+    assert "async boom" in str(exc_info.value.original_exception)
