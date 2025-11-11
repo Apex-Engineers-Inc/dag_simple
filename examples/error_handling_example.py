@@ -65,9 +65,9 @@ def main() -> None:
         print(f"\n{e}\n")
         print("\nYou can access the original exception:")
         print(f"  Original: {e.original_exception}")  # type: ignore
-        print(f"\nYou can access the execution path:")
+        print("\nYou can access the execution path:")
         print(f"  Path: {' -> '.join(e.execution_path)}")  # type: ignore
-        print(f"\nYou can access the node inputs:")
+        print("\nYou can access the node inputs:")
         print(f"  Inputs: {e.node_inputs}")  # type: ignore
 
 
