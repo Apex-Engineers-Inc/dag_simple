@@ -8,7 +8,7 @@
 [![Typing: Pyright](https://img.shields.io/badge/typing-Pyright-blue.svg)](https://github.com/Apex-Engineers-Inc/dag_simple/actions/workflows/ci-publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![AGAMPE Logo](assets/logo.svg)
+![DAG Simple Logo](assets/logo.svg)
 
 A **dead simple**, **type-safe** DAG (Directed Acyclic Graph) library for Python with runtime validation, caching, and full async support.
 
