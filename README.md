@@ -8,6 +8,8 @@
 [![Typing: Pyright](https://img.shields.io/badge/typing-Pyright-blue.svg)](https://github.com/Apex-Engineers-Inc/dag_simple/actions/workflows/ci-publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+![DAG Simple Logo](assets/logo.svg)
+
 A **dead simple**, **type-safe** DAG (Directed Acyclic Graph) library for Python with runtime validation, caching, and full async support.
 
 Perfect for building data pipelines, ML workflows, and computation graphs without the complexity of larger frameworks.
@@ -389,6 +391,68 @@ except Exception as e:
     print(f"Expected error: {e}")
     assert "NodeExecutionError" in str(type(e).__name__)
 ```
+
+### Error Handling
+
+All execution errors are wrapped with comprehensive context information for easier debugging:
+
+```python
+from dag_simple import node, NodeExecutionError
+
+@node()
+def load_data(source: str) -> dict[str, int]:
+    return {"count": 100, "threshold": 50}
+
+@node(deps=[load_data])
+def process_data(load_data: dict[str, int], multiplier: int) -> int:
+    return load_data["count"] * multiplier
+
+@node(deps=[process_data])
+def validate_result(process_data: int) -> int:
+    if process_data > 1000:
+        raise ValueError(f"Result too large: {process_data}")
+    return process_data
+
+@node(deps=[validate_result])
+def save_result(validate_result: int) -> str:
+    return f"Saved {validate_result}"
+
+try:
+    # This will fail at validate_result because 100 * 20 = 2000 > 1000
+    save_result.run(source="database", multiplier=20)
+except NodeExecutionError as e:
+    print(e)
+```
+
+**Error Output:**
+
+```
+================================================================================
+Node Execution Failed: 'validate_result'
+================================================================================
+
+Execution Path:
+  load_data -> process_data -> validate_result
+
+Inputs to 'validate_result':
+  process_data: 2000
+
+Original Error:
+  ValueError: Result too large: 2000
+================================================================================
+```
+
+**Key Features:**
+
+- 🔍 **Execution Path** - Shows which nodes executed before the error occurred
+- 📝 **Input Context** - All inputs passed to the failed node are captured
+- 🐛 **Original Exception** - Full error details are preserved and displayed
+- 🎯 **Clear Formatting** - Well-structured, easy-to-read error messages
+- ⚙️ **Async Support** - Works seamlessly with both sync and async execution
+- 📦 **Multiprocessing Ready** - Exceptions are picklable for use with `ProcessPoolExecutor`
+- 🔗 **Exception Chaining** - Access `e.original_exception`, `e.execution_path`, and `e.node_inputs` for programmatic handling
+
+See [`examples/error_handling_example.py`](examples/error_handling_example.py) for more detailed examples.
 
 ### Result Caching
 
