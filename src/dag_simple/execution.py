@@ -345,17 +345,13 @@ def run_async_in_process(
         return future.result()
 
 
-def _run_sync_entry_point(
-    node: Node[R], enable_cache: bool, inputs: dict[str, Any]
-) -> R:
+def _run_sync_entry_point(node: Node[R], enable_cache: bool, inputs: dict[str, Any]) -> R:
     """Process entry point for ``run_sync_in_process``."""
 
     return run_sync(node, enable_cache=enable_cache, **inputs)  # pragma: no cover
 
 
-def _run_async_entry_point(
-    node: Node[R], enable_cache: bool, inputs: dict[str, Any]
-) -> R:
+def _run_async_entry_point(node: Node[R], enable_cache: bool, inputs: dict[str, Any]) -> R:
     """Process entry point for ``run_async_in_process``."""
 
     return asyncio.run(run_async(node, enable_cache=enable_cache, **inputs))  # pragma: no cover

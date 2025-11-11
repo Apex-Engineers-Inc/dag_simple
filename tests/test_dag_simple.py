@@ -86,8 +86,10 @@ class TestTypeValidation:
         with raises(NodeExecutionError) as exc_info:
             typed_func.run(x="not an int")
 
-        assert isinstance(exc_info.value.original_exception, ValidationError)
-        assert "expected type int" in str(exc_info.value.original_exception)
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, ValidationError)
+        assert "expected type int" in str(exc.original_exception)
 
     def test_invalid_output_type(self) -> None:
         """Test output type validation."""
@@ -99,8 +101,10 @@ class TestTypeValidation:
         with raises(NodeExecutionError) as exc_info:
             bad_return.run(x=5)
 
-        assert isinstance(exc_info.value.original_exception, ValidationError)
-        assert "return type expected int" in str(exc_info.value.original_exception)
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, ValidationError)
+        assert "return type expected int" in str(exc.original_exception)
 
     def test_validation_disabled(self) -> None:
         """Test that validation can be disabled."""
@@ -299,7 +303,9 @@ class TestInputNodes:
         with raises(NodeExecutionError) as exc_info:
             consume.run(x="not an int")
 
-        assert isinstance(exc_info.value.original_exception, ValidationError)
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, ValidationError)
 
     def test_input_node_without_type_hint_skips_validation(self) -> None:
         """Input nodes without type hints should accept any value."""
@@ -843,8 +849,10 @@ class TestExecutionErrorHandling:
         with raises(NodeExecutionError) as exc_info:
             bad_func.run(x="not_an_int")
 
-        assert isinstance(exc_info.value.original_exception, TypeError)
-        assert "bad_func" in str(exc_info.value)
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, TypeError)
+        assert "bad_func" in str(exc)
 
     def test_run_async_type_error(self) -> None:
         """Test TypeError handling in run_async."""
@@ -858,8 +866,10 @@ class TestExecutionErrorHandling:
         with raises(NodeExecutionError) as exc_info:
             asyncio.run(bad_async_func.run_async(x="not_an_int"))
 
-        assert isinstance(exc_info.value.original_exception, TypeError)
-        assert "bad_async_func" in str(exc_info.value)
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, TypeError)
+        assert "bad_async_func" in str(exc)
 
     def test_run_async_missing_dependency(self) -> None:
         """Test MissingDependencyError in run_async."""
@@ -1017,7 +1027,11 @@ class TestNodeEdgeCases:
 
         # Patch get_type_hints where it's used in the node module
         # We need to patch the already-imported reference
-        with patch.object(sys.modules["dag_simple.node"], "get_type_hints", side_effect=Exception("Type hint error")):
+        with patch.object(
+            sys.modules["dag_simple.node"],
+            "get_type_hints",
+            side_effect=Exception("Type hint error"),
+        ):
             # This should not raise an exception, but should disable validation
             node_instance = Node(problematic_func, validate_types=True)
             assert node_instance.validate_types is False
@@ -1175,14 +1189,16 @@ class TestEnhancedErrorMessages:
             failing_node.run(x=42)
 
         # Check that the exception has the right attributes
-        assert exc_info.value.node_name == "failing_node"
-        assert exc_info.value.execution_path == ["failing_node"]
-        assert exc_info.value.node_inputs == {"x": 42}
-        assert isinstance(exc_info.value.original_exception, ValueError)
-        assert str(exc_info.value.original_exception) == "Something went wrong!"
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert exc.node_name == "failing_node"
+        assert exc.execution_path == ["failing_node"]
+        assert exc.node_inputs == {"x": 42}
+        assert isinstance(exc.original_exception, ValueError)
+        assert str(exc.original_exception) == "Something went wrong!"
 
         # Check the formatted error message
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "Node Execution Failed: 'failing_node'" in error_msg
         assert "failing_node" in error_msg  # Execution path
         assert "x: 42" in error_msg  # Inputs
@@ -1199,13 +1215,15 @@ class TestEnhancedErrorMessages:
             asyncio.run(failing_async_node.run_async(y="test"))
 
         # Check attributes
-        assert exc_info.value.node_name == "failing_async_node"
-        assert exc_info.value.execution_path == ["failing_async_node"]
-        assert exc_info.value.node_inputs == {"y": "test"}
-        assert isinstance(exc_info.value.original_exception, RuntimeError)
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert exc.node_name == "failing_async_node"
+        assert exc.execution_path == ["failing_async_node"]
+        assert exc.node_inputs == {"y": "test"}
+        assert isinstance(exc.original_exception, RuntimeError)
 
         # Check the formatted error message
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "Node Execution Failed: 'failing_async_node'" in error_msg
         assert "y: 'test'" in error_msg
 
@@ -1228,12 +1246,14 @@ class TestEnhancedErrorMessages:
             step3.run(x=5)
 
         # Check the execution path shows all nodes
-        assert exc_info.value.node_name == "step3"
-        assert exc_info.value.execution_path == ["step1", "step2", "step3"]
-        assert exc_info.value.node_inputs == {"step2": 20}  # (5*2) + 10
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert exc.node_name == "step3"
+        assert exc.execution_path == ["step1", "step2", "step3"]
+        assert exc.node_inputs == {"step2": 20}  # (5*2) + 10
 
         # Check the formatted error message shows the path
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "step1 -> step2 -> step3" in error_msg
         assert "step2: 20" in error_msg
 
@@ -1262,12 +1282,14 @@ class TestEnhancedErrorMessages:
             save_data.run(source="db", multiplier=10)
 
         # Check execution path
-        assert exc_info.value.node_name == "validate_data"
-        assert exc_info.value.execution_path == ["load_data", "process_data", "validate_data"]
-        assert exc_info.value.node_inputs == {"process_data": 100}
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert exc.node_name == "validate_data"
+        assert exc.execution_path == ["load_data", "process_data", "validate_data"]
+        assert exc.node_inputs == {"process_data": 100}
 
         # Check error message
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "load_data -> process_data -> validate_data" in error_msg
         assert "process_data: 100" in error_msg
         assert "Value too large: 100" in error_msg
@@ -1283,12 +1305,14 @@ class TestEnhancedErrorMessages:
             typed_node.run(x="not an int")
 
         # Check that the original error is a ValidationError
-        assert isinstance(exc_info.value.original_exception, ValidationError)
-        assert exc_info.value.node_name == "typed_node"
-        assert exc_info.value.node_inputs == {"x": "not an int"}
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, ValidationError)
+        assert exc.node_name == "typed_node"
+        assert exc.node_inputs == {"x": "not an int"}
 
         # Check error message shows the validation issue
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "typed_node" in error_msg
         assert "x: 'not an int'" in error_msg
 
@@ -1303,11 +1327,13 @@ class TestEnhancedErrorMessages:
             bad_output.run(x=5)
 
         # Check that it's wrapped
-        assert isinstance(exc_info.value.original_exception, ValidationError)
-        assert exc_info.value.node_name == "bad_output"
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert isinstance(exc.original_exception, ValidationError)
+        assert exc.node_name == "bad_output"
 
         # Check error message
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "bad_output" in error_msg
 
     def test_long_input_values_truncated(self) -> None:
@@ -1323,10 +1349,12 @@ class TestEnhancedErrorMessages:
             process_list.run(data=long_list)
 
         # Check that the input is captured
-        assert exc_info.value.node_inputs == {"data": long_list}
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert exc.node_inputs == {"data": long_list}
 
         # Check that the formatted message truncates long values
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "data:" in error_msg
         # The representation should be truncated
         assert "..." in error_msg
@@ -1352,10 +1380,12 @@ class TestEnhancedErrorMessages:
             asyncio.run(async_step3.run_async(x=10))
 
         # Check execution path
-        assert exc_info.value.execution_path == ["async_step1", "async_step2", "async_step3"]
-        assert exc_info.value.node_name == "async_step3"
-        assert exc_info.value.node_inputs == {"async_step2": 25}  # (10*2) + 5
+        exc = exc_info.value
+        assert isinstance(exc, NodeExecutionError)
+        assert exc.execution_path == ["async_step1", "async_step2", "async_step3"]
+        assert exc.node_name == "async_step3"
+        assert exc.node_inputs == {"async_step2": 25}  # (10*2) + 5
 
         # Check error message
-        error_msg = str(exc_info.value)
+        error_msg = str(exc)
         assert "async_step1 -> async_step2 -> async_step3" in error_msg

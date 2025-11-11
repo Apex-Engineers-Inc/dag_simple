@@ -45,8 +45,7 @@ def main() -> None:
     print("\nReusing a shared process pool for multiple runs:")
     with ProcessPoolExecutor(max_workers=2) as pool:
         parallel_runs = [
-            run_sync_in_process(total_energy, executor=pool, seed=seed)
-            for seed in range(3)
+            run_sync_in_process(total_energy, executor=pool, seed=seed) for seed in range(3)
         ]
         print(parallel_runs)
 

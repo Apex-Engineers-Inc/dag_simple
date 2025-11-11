@@ -54,13 +54,17 @@ def test_run_sync_in_process_propagates_exceptions() -> None:
     with raises(NodeExecutionError) as exc_info:
         run_sync_in_process(explode)
 
-    assert isinstance(exc_info.value.original_exception, ValueError)
-    assert "boom" in str(exc_info.value.original_exception)
+    exc = exc_info.value
+    assert isinstance(exc, NodeExecutionError)
+    assert isinstance(exc.original_exception, ValueError)
+    assert "boom" in str(exc.original_exception)
 
 
 def test_run_async_in_process_propagates_exceptions() -> None:
     with raises(NodeExecutionError) as exc_info:
         run_async_in_process(explode_async)
 
-    assert isinstance(exc_info.value.original_exception, RuntimeError)
-    assert "async boom" in str(exc_info.value.original_exception)
+    exc = exc_info.value
+    assert isinstance(exc, NodeExecutionError)
+    assert isinstance(exc.original_exception, RuntimeError)
+    assert "async boom" in str(exc.original_exception)

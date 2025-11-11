@@ -93,7 +93,7 @@ class NodeExecutionError(DAGError):
         if not inputs:
             return "  (no inputs)"
 
-        lines = []
+        lines: list[str] = []
         for key, value in inputs.items():
             # Truncate long values
             value_str = repr(value)

@@ -9,15 +9,27 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+def _default_dict() -> dict[str, Any]:
+    return {}
+
+
+def _default_locks() -> dict[str, asyncio.Lock]:
+    return {}
+
+
+def _default_list() -> list[str]:
+    return []
+
+
 @dataclass
 class ExecutionContext:
     """Context for DAG execution with caching support."""
 
-    cache: dict[str, Any] = field(default_factory=lambda: dict[str, Any]())
-    inputs: dict[str, Any] = field(default_factory=lambda: dict[str, Any]())
+    cache: dict[str, Any] = field(default_factory=_default_dict)
+    inputs: dict[str, Any] = field(default_factory=_default_dict)
     enable_cache: bool = True
-    _cache_locks: dict[str, asyncio.Lock] = field(default_factory=lambda: dict[str, asyncio.Lock]())
-    execution_path: list[str] = field(default_factory=list)
+    _cache_locks: dict[str, asyncio.Lock] = field(default_factory=_default_locks)
+    execution_path: list[str] = field(default_factory=_default_list)
 
     def get_cached(self, key: str) -> tuple[bool, Any]:
         """Return (found, value) tuple."""
