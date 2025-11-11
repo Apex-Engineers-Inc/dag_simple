@@ -382,12 +382,12 @@ def typed_function(x: int, y: str) -> str:
 result = typed_function.run(x=42, y="Answer")
 assert result == "Answer: 42"
 
-# ✗ This raises ValidationError
+# ✗ This raises NodeExecutionError (wrapping ValidationError)
 try:
     result = typed_function.run(x="wrong", y="Answer")
 except Exception as e:
     print(f"Expected error: {e}")
-    assert "ValidationError" in str(type(e).__name__)
+    assert "NodeExecutionError" in str(type(e).__name__)
 ```
 
 ### Result Caching
