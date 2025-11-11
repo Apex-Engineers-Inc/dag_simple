@@ -390,6 +390,49 @@ except Exception as e:
     assert "NodeExecutionError" in str(type(e).__name__)
 ```
 
+### Error Handling
+
+All execution errors are wrapped with comprehensive context information for easier debugging:
+
+```python
+from dag_simple import node, NodeExecutionError
+
+@node(validate_types=True)
+def process_data(data: list[int]) -> int:
+    if len(data) == 0:
+        raise ValueError("Empty data not allowed")
+    return sum(data) / len(data)
+
+@node(deps=[process_data])
+def use_result(process_data: int) -> str:
+    return f"Average: {process_data}"
+
+# When an error occurs, NodeExecutionError provides:
+# - The complete execution path (which nodes ran before the error)
+# - All inputs passed to the failed node
+# - The original exception for debugging
+try:
+    result = use_result.run(data=[])
+except NodeExecutionError as e:
+    # Error message includes:
+    # - Execution path: [process_data]
+    # - Failed node: process_data
+    # - Input: {"data": []}
+    # - Original error: ValueError("Empty data not allowed")
+    print(e)
+```
+
+**Benefits:**
+
+- 🔍 **Execution Path** - See which nodes executed before the error occurred
+- 📝 **Input Context** - All inputs passed to the failed node are captured
+- 🐛 **Original Exception** - Full stack trace of the underlying error is preserved
+- 🎯 **Clear Formatting** - Error messages are well-formatted and easy to read
+- ⚙️ **Async Support** - Works seamlessly with both sync and async execution
+- 📦 **Multiprocessing Ready** - Exceptions are picklable for use with `ProcessPoolExecutor`
+
+See [`examples/error_handling_example.py`](examples/error_handling_example.py) for more detailed examples.
+
 ### Result Caching
 
 Cache expensive computations that are used multiple times:
